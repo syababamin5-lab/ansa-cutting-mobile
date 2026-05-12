@@ -12,8 +12,8 @@ void main() async {
   // Saat ini dibiarkan kosong agar UI tetap bisa di-build saat testing
   try {
     await Supabase.initialize(
-      url: 'https://placeholder-project-id.supabase.co',
-      anonKey: 'placeholder-anon-key',
+      url: 'https://ibdrtyitfrrxzfjzjfje.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZHJ0eWl0ZnJyeHpmanpqZmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTAxOTksImV4cCI6MjA5NDE2NjE5OX0.hLtwJJURpsVotRkqtBI5FeHDV5o3izeVP5uW2_13T84',
     );
   } catch (e) {
     debugPrint("Supabase init error: $e");
