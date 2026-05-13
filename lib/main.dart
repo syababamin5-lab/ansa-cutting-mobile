@@ -8,15 +8,13 @@ import 'features/dashboard/views/main_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // TODO: Ganti dengan URL & Anon Key dari project Supabase Anda nantinya
-  // Saat ini dibiarkan kosong agar UI tetap bisa di-build saat testing
   try {
     await Supabase.initialize(
       url: 'https://ibdrtyitfrrxzfjzjfje.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZHJ0eWl0ZnJyeHpmanpqZmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTAxOTksImV4cCI6MjA5NDE2NjE5OX0.hLtwJJURpsVotRkqtBI5FeHDV5o3izeVP5uW2_13T84',
     );
   } catch (e) {
-    debugPrint("Supabase init error: $e");
+    debugPrint("Supabase init error: \$e");
   }
 
   runApp(
@@ -35,16 +33,22 @@ class AnsaApp extends StatelessWidget {
       title: 'Ansa Cutting App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.background,
+        colorScheme: const ColorScheme.dark(
+          primary: AppColors.primary,
           background: AppColors.background,
+          surface: AppColors.surface,
         ),
         useMaterial3: true,
-        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme).apply(
+          bodyColor: AppColors.textPrimary,
+          displayColor: AppColors.textPrimary,
+        ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.transparent,
           elevation: 0,
+          centerTitle: true,
         ),
       ),
       home: const MainScreen(),

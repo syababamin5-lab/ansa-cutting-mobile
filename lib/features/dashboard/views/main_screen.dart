@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../cutting/views/input_view.dart';
 import '../../reports/views/laporan_view.dart';
@@ -24,41 +23,69 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Allow body to extend under the floating nav bar
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child: _pages[_currentIndex],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, -5),
-            ),
-          ],
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.navBackground,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(0, Icons.edit_document, "INPUT"),
+              _buildNavItem(1, Icons.bar_chart_rounded, "LAPORAN"),
+              _buildNavItem(2, Icons.wallet_rounded, "GAJI"),
+            ],
+          ),
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          backgroundColor: AppColors.surface,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textSecondary,
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit02, color: _currentIndex == 0 ? AppColors.primary : Colors.grey),
-              label: 'Input',
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 24 : 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.activeTab : Colors.transparent,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : AppColors.textSecondary,
+              size: 24,
             ),
-            BottomNavigationBarItem(
-              icon: HugeIcon(icon: HugeIcons.strokeRoundedDocumentAttachment, color: _currentIndex == 1 ? AppColors.primary : Colors.grey),
-              label: 'Laporan',
-            ),
-            BottomNavigationBarItem(
-              icon: HugeIcon(icon: HugeIcons.strokeRoundedWallet01, color: _currentIndex == 2 ? AppColors.primary : Colors.grey),
-              label: 'Gaji',
-            ),
+            if (isSelected) const SizedBox(width: 8),
+            if (isSelected)
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
           ],
         ),
       ),

@@ -1,21 +1,41 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Identitas Brand Ansa (Emerald / Zamrud Premium)
-  static const Color primary = Color(0xFF065F46); // Emerald Tua
-  static const Color primaryLight = Color(0xFF10B981); // Emerald Terang
-  static const Color secondary = Color(0xFF047857);
+  // Backgrounds (REDUCED GREEN INTENSITY BY 50%)
+  static const Color background = Color(0xFF02120D); 
+  static const Color surface = Color(0xFF051D16); 
+  static const Color surfaceLight = Color(0xFF0A2920); 
   
-  // Latar Belakang & Permukaan Card
-  static const Color background = Color(0xFFF0FDF4); // Hijau sangat muda
-  static const Color surface = Colors.white;
+  // Accents
+  static const Color primary = Color(0xFF3DE092); 
+  static const Color activeTab = Color(0xFF3563FF); 
+  static const Color navBackground = Color(0xFF010A08); 
+  static const Color progressBar = Color(0xFF6C88FF); 
   
-  // Status Warna
-  static const Color success = Color(0xFF10B981);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color error = Color(0xFFEF4444);
+  // Text
+  static const Color textPrimary = Colors.white;
+  static const Color textSecondary = Color(0xFF6D8F82); 
   
-  // Warna Teks
-  static const Color textPrimary = Color(0xFF064E3B); // Dark Emerald
-  static const Color textSecondary = Color(0xFF64748B); // Slate Grey
+  // Status
+  static const Color success = Color(0xFF3DE092);
+  static const Color warning = Color(0xFFF5A623);
+  static const Color error = Color(0xFFFF4B4B);
+
+  // Gradients (DARKER & MORE NEUTRAL)
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF08261E),
+      Color(0xFF02120D),
+    ],
+  );
+
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [Color(0xFF3DE092), Color(0xFF00BFA5)],
+  );
+
+  static const LinearGradient activeGradient = LinearGradient(
+    colors: [Color(0xFF3563FF), Color(0xFF6C88FF)],
+  );
 }

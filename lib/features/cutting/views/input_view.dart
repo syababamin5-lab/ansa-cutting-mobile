@@ -1,207 +1,346 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../models/potong_kain_model.dart';
 import '../viewmodels/cutting_viewmodel.dart';
 import 'input_detail_screen.dart';
 
-class InputView extends ConsumerWidget {
+class InputView extends ConsumerStatefulWidget {
   const InputView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final draftsAsync = ref.watch(draftSesiProvider);
+  ConsumerState<InputView> createState() => _InputViewState();
+}
+
+class _InputViewState extends ConsumerState<InputView> {
+  @override
+  Widget build(BuildContext context) {
+    final draftAsync = ref.watch(draftSesiProvider);
     final selesaiAsync = ref.watch(laporanSelesaiProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Data Potong Kain', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
+        title: const Text('MANAJEMEN POTONG', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 18)),
+        centerTitle: false,
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.read(cuttingControllerProvider.notifier).refreshData(),
+        color: AppColors.primary,
+        backgroundColor: AppColors.surface,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 150),
           children: [
-            _buildHeader("Belum Selesai (Draft)", HugeIcons.strokeRoundedTime02),
-            const SizedBox(height: 12),
-            draftsAsync.when(
-              data: (drafts) => _buildList(drafts, isDraft: true, context: context),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('Error: $err'),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            _buildHeader("Selesai Hari Ini", HugeIcons.strokeRoundedCheckmarkCircle02),
-            const SizedBox(height: 12),
-            selesaiAsync.when(
-              data: (selesai) {
-                final hariIni = selesai.where((e) => isSameDate(e.tanggal, DateTime.now())).toList();
-                return _buildList(hariIni, isDraft: false, context: context);
+            _buildHeaderSection(Icons.assignment_turned_in_rounded, "SESI BELUM SELESAI"),
+            const SizedBox(height: 16),
+            draftAsync.when(
+              data: (draftItems) {
+                final Map<String, List<PotongKainModel>> groupedDraft = {};
+                for (var item in draftItems) {
+                  final key = "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
+                  groupedDraft.putIfAbsent(key, () => []).add(item);
+                }
+                final sortedDrafts = groupedDraft.values.toList()
+                  ..sort((a, b) => b.first.tanggal.compareTo(a.first.tanggal));
+
+                if (sortedDrafts.isEmpty) return _buildEmptyState("Tidak Ada Sesi Aktif", "Silakan buka sesi baru di bawah");
+                return Column(children: sortedDrafts.map((items) => _buildSessionCard(context, items, true)).toList());
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('Error: $err'),
+              loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.primary))),
+              error: (err, _) => Center(child: Text("Error: $err")),
+            ),
+
+            const SizedBox(height: 40),
+
+            _buildHeaderSection(Icons.history_rounded, "RIWAYAT SESI HARI INI"),
+            const SizedBox(height: 16),
+            selesaiAsync.when(
+              data: (selesaiItems) {
+                final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                final todayFinished = selesaiItems.where((item) => DateFormat('yyyy-MM-dd').format(item.tanggal) == todayStr).toList();
+                
+                final Map<String, List<PotongKainModel>> groupedToday = {};
+                for (var item in todayFinished) {
+                  final key = "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
+                  groupedToday.putIfAbsent(key, () => []).add(item);
+                }
+                final sortedToday = groupedToday.values.toList()
+                  ..sort((a, b) => b.first.tanggal.compareTo(a.first.tanggal));
+
+                if (sortedToday.isEmpty) return _buildEmptyState("Belum Ada Sesi Selesai", "Sesi yang selesai hari ini akan muncul di sini");
+                return Column(children: sortedToday.map((items) => _buildSessionCard(context, items, false)).toList());
+              },
+              loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.primary))),
+              error: (err, _) => Center(child: Text("Error: $err")),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddSessionDialog(context, ref),
-        backgroundColor: AppColors.primary,
-        icon: const HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: Colors.white),
-        label: const Text('Buka Sesi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: FloatingActionButton.extended(
+          onPressed: () => _showNewSessionModal(context),
+          backgroundColor: AppColors.primary,
+          icon: const Icon(Icons.add_rounded, color: AppColors.background, size: 28),
+          label: const Text("BUKA SESI BARU", style: TextStyle(color: AppColors.background, fontWeight: FontWeight.w900, letterSpacing: 1)),
+        ),
       ),
     );
   }
 
-  bool isSameDate(DateTime d1, DateTime d2) => 
-      d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
-
-  Widget _buildHeader(String title, IconData icon) {
+  Widget _buildHeaderSection(IconData icon, String title) {
     return Row(
       children: [
-        HugeIcon(icon: icon, color: AppColors.primary, size: 24),
-        const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        Icon(icon, color: AppColors.primary, size: 18),
+        const SizedBox(width: 12),
+        Text(title, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
       ],
     );
   }
 
-  Widget _buildList(List<PotongKainModel> data, {required bool isDraft, required BuildContext context}) {
-    if (data.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
-        child: const Center(child: Text("Kosong", style: TextStyle(color: Colors.grey))),
-      );
-    }
-    
-    // Group by Tanggal, Sesi, Model (karena model list menyimpan detail warna)
-    // Di aplikasi aslinya, ada peringkasan. Untuk sementara kita tampilkan per item unik
-    final Map<String, PotongKainModel> uniqueSessions = {};
-    for (var item in data) {
-      final key = "${item.tanggal}_${item.sesi}_${item.model}";
-      if (!uniqueSessions.containsKey(key)) {
-        uniqueSessions[key] = item;
-      }
-    }
+  Widget _buildSessionCard(BuildContext context, List<PotongKainModel> items, bool isDraft) {
+    final first = items.first;
+    final totalPcs = items.fold<int>(0, (sum, item) => sum + item.hasilPcs);
+    final totalKg = items.fold<double>(0, (sum, item) => sum + item.kgTerpakai);
+    final totalRol = items.where((e) => e.warna.isNotEmpty).length;
+    final displayRol = (totalRol == 0 && (totalKg > 0 || totalPcs > 0)) ? 1 : totalRol;
 
-    return Column(
-      children: uniqueSessions.values.map((item) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 0,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.shade200)
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              backgroundColor: isDraft ? AppColors.warning.withOpacity(0.2) : AppColors.success.withOpacity(0.2),
-              child: HugeIcon(
-                icon: isDraft ? HugeIcons.strokeRoundedTime02 : HugeIcons.strokeRoundedCheckmarkBadge01,
-                color: isDraft ? AppColors.warning : AppColors.success,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => InputDetailScreen(session: first, isDraft: isDraft)),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: isDraft ? Colors.white.withOpacity(0.05) : AppColors.success.withOpacity(0.1)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(first.model.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                            const SizedBox(height: 4),
+                            Text("${DateFormat('dd MMM yyyy').format(first.tanggal)} | ${first.sesi}", style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                      if (!isDraft)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                          child: const Text("SELESAI", style: TextStyle(color: AppColors.success, fontSize: 8, fontWeight: FontWeight.bold)),
+                        )
+                      else
+                        const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primary, size: 14),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.navBackground.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatItem("ROL", displayRol.toString(), Colors.white70),
+                        _buildStatItem("KG", totalKg.toStringAsFixed(1), const Color(0xFF00CED1)), // BIRU UNTUK KG
+                        _buildStatItem("PCS", totalPcs.toString(), const Color(0xFFFFD700)), // KUNING UNTUK PCS
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            title: Text(item.model, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text("${DateFormat('dd MMM yyyy').format(item.tanggal)} | ${item.sesi}"),
-            trailing: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDraft ? AppColors.primary : Colors.grey.shade200,
-                foregroundColor: isDraft ? Colors.white : AppColors.textPrimary,
-                elevation: 0,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(builder: (_) => InputDetailScreen(session: item, isDraft: isDraft))
-                );
-              },
-              child: Text(isDraft ? "Teruskan" : "Edit"),
+          ),
+          Positioned(
+            right: 30, top: 20,
+            child: Opacity(
+              opacity: 0.1,
+              child: Icon(isDraft ? Icons.auto_awesome : Icons.check_circle_rounded, color: Colors.white, size: 40),
             ),
           ),
-        );
-      }).toList(),
+        ],
+      ),
     );
   }
 
-  void _showAddSessionDialog(BuildContext context, WidgetRef ref) {
-    // Form untuk buka sesi baru seperti di Streamlit
-    String selectedSesi = "Sesi 1";
-    final TextEditingController modelCtrl = TextEditingController();
+  Widget _buildStatItem(String label, String value, Color valueColor) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        const SizedBox(height: 6),
+        Text(value, style: TextStyle(color: valueColor, fontSize: 20, fontWeight: FontWeight.w900)),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(String title, String sub) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(color: AppColors.surface.withOpacity(0.5), borderRadius: BorderRadius.circular(24)),
+      child: Column(
+        children: [
+          const Icon(Icons.inventory_2_outlined, color: Colors.white10, size: 40),
+          const SizedBox(height: 16),
+          Text(title, style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(sub, style: const TextStyle(color: Colors.white24, fontSize: 10), textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  void _showNewSessionModal(BuildContext context) {
+    String modelName = '';
+    String sesiName = 'Sesi 1';
+    DateTime selectedDate = DateTime.now();
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, top: 24, left: 24, right: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Buka Sesi Baru", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedSesi,
-                    decoration: InputDecoration(
-                      labelText: "Pilih Sesi",
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    items: ["Sesi 1", "Sesi 2", "Sesi 3", "Sesi 4"].map((String val) {
-                      return DropdownMenuItem<String>(value: val, child: Text(val));
-                    }).toList(),
-                    onChanged: (val) => setState(() => selectedSesi = val!),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: modelCtrl,
-                    decoration: InputDecoration(
-                      labelText: "Nama Model (Cth: Kemeja Polos)",
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                      onPressed: () {
-                        if (modelCtrl.text.isNotEmpty) {
-                          final newData = PotongKainModel(
-                            tanggal: DateTime.now(),
-                            sesi: selectedSesi,
-                            model: modelCtrl.text,
-                            warna: '',
-                            kgTerpakai: 0.0,
-                            hasilPcs: 0,
-                            status: 'Draft',
-                            statusPembayaran: 'Belum',
-                            gajiTerbayar: 0.0,
-                          );
-                          ref.read(cuttingControllerProvider.notifier).simpanSesiBaru(newData);
-                          Navigator.pop(ctx);
-                        }
-                      },
-                      child: const Text("Simpan Sesi"),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("BUKA SESI BARU", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                const SizedBox(height: 32),
+                
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      builder: (context, child) => Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: const ColorScheme.dark(primary: AppColors.primary, onPrimary: AppColors.background, surface: AppColors.surface),
+                        ),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) {
+                      setModalState(() => selectedDate = picked);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("TANGGAL CUTTING", style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
+                            Text(DateFormat('EEEE, dd MMMM yyyy').format(selectedDate), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            );
-          }
-        );
-      },
+                ),
+                
+                const SizedBox(height: 16),
+                TextField(
+                  onChanged: (val) => modelName = val,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    labelText: "NAMA MODEL",
+                    labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    prefixIcon: const Icon(Icons.style_rounded, color: AppColors.primary),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: sesiName,
+                  dropdownColor: AppColors.surface,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    labelText: "PILIH SESI",
+                    labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    prefixIcon: const Icon(Icons.access_time_filled_rounded, color: AppColors.primary),
+                  ),
+                  items: ['Sesi 1', 'Sesi 2', 'Sesi 3', 'Sesi 4', 'Sesi 5'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                  onChanged: (val) => sesiName = val!,
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (modelName.isEmpty) return;
+                      final newSesi = PotongKainModel(
+                        tanggal: selectedDate,
+                        sesi: sesiName,
+                        model: modelName,
+                        warna: '',
+                        kgTerpakai: 0,
+                        hasilPcs: 0,
+                        status: 'Draft',
+                        statusPembayaran: 'Belum',
+                        gajiTerbayar: 0,
+                      );
+                      
+                      await ref.read(cuttingControllerProvider.notifier).simpanSesiBaru(newSesi);
+                      
+                      if (mounted) {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => InputDetailScreen(session: newSesi, isDraft: true)));
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.background,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: const Text("MULAI MENCATAT", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

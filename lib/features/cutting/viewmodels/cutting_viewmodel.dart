@@ -8,7 +8,7 @@ final cuttingRepositoryProvider = Provider<CuttingRepository>((ref) {
   return CuttingRepository(Supabase.instance.client);
 });
 
-// Stream Provider untuk Data Laporan (Realtime secara simulasi / load per request)
+// Stream Providers
 final draftSesiProvider = FutureProvider<List<PotongKainModel>>((ref) async {
   return ref.read(cuttingRepositoryProvider).getDrafts();
 });
@@ -17,11 +17,15 @@ final laporanSelesaiProvider = FutureProvider<List<PotongKainModel>>((ref) async
   return ref.read(cuttingRepositoryProvider).getDataSelesai();
 });
 
-final belumBayarProvider = FutureProvider<List<PotongKainModel>>((ref) async {
+final sesiBelumBayarProvider = FutureProvider<List<PotongKainModel>>((ref) async {
   return ref.read(cuttingRepositoryProvider).getSesiBelumBayar();
 });
 
-// StateNotifier untuk mengendalikan logika form dan tombol (Loading / Success / Error)
+final sesiSudahBayarProvider = FutureProvider<List<PotongKainModel>>((ref) async {
+  return ref.read(cuttingRepositoryProvider).getSesiSudahBayar();
+});
+
+// StateNotifier Controller
 class CuttingController extends StateNotifier<AsyncValue<void>> {
   final Ref ref;
 
@@ -49,26 +53,26 @@ class CuttingController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> bayarSesi(String tanggal, String sesi, String model, double tarifPerPcs) async {
+  Future<void> bayarSesi(List<int> ids, double tarifPerPcs) async {
     state = const AsyncValue.loading();
     try {
-      await ref.read(cuttingRepositoryProvider).bayarSesi(tanggal, sesi, model, tarifPerPcs);
+      await ref.read(cuttingRepositoryProvider).bayarSesi(ids, tarifPerPcs);
       state = const AsyncValue.data(null);
       refreshData();
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
+      rethrow;
     }
   }
 
-  // Fungsi untuk me-refresh ulang semua data di UI jika terjadi perubahan
   void refreshData() {
     ref.invalidate(draftSesiProvider);
     ref.invalidate(laporanSelesaiProvider);
-    ref.invalidate(belumBayarProvider);
+    ref.invalidate(sesiBelumBayarProvider);
+    ref.invalidate(sesiSudahBayarProvider);
   }
 }
 
-// Provider Global untuk dipakai oleh Tombol/Form di UI
 final cuttingControllerProvider = StateNotifierProvider<CuttingController, AsyncValue<void>>((ref) {
   return CuttingController(ref);
 });

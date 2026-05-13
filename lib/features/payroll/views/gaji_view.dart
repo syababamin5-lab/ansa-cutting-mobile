@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../cutting/models/potong_kain_model.dart';
 import '../../cutting/viewmodels/cutting_viewmodel.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class GajiView extends ConsumerStatefulWidget {
   const GajiView({super.key});
@@ -14,320 +17,290 @@ class GajiView extends ConsumerStatefulWidget {
 }
 
 class _GajiViewState extends ConsumerState<GajiView> {
-  // Menyimpan sesi mana saja yang dicentang
-  final Set<String> _selectedKeys = {};
-  
-  // Menyimpan input tarif per model
-  final Map<String, double> _tarifPerModel = {};
+  bool _tampilkanHarga = true;
+  final Set<String> _selectedSessions = {};
+  final TextEditingController _tarifController = TextEditingController(text: "1500");
+  final currencyFmt = NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0);
 
-  String _generateKey(PotongKainModel item) {
-    return "${item.tanggal.toIso8601String().split('T')[0]}_${item.sesi}_${item.model}";
+  @override
+  void dispose() {
+    _tarifController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final belumBayarAsync = ref.watch(belumBayarProvider);
-    final curFormat = NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0);
+    final asyncData = ref.watch(laporanSelesaiProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.background, // KEMBALI KE DEEP FOREST
       appBar: AppBar(
-        title: const Text('Perhitungan Gaji', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
+        title: const Text('PERHITUNGAN GAJI', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 18)),
+        centerTitle: false,
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.read(cuttingControllerProvider.notifier).refreshData(),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader("1. Pilih Sesi untuk Digaji", HugeIcons.strokeRoundedCheckmarkBadge01),
-              const SizedBox(height: 12),
-              
-              belumBayarAsync.when(
-                data: (belumBayar) {
-                  if (belumBayar.isEmpty) {
-                    return _buildEmptyState("Semua sesi potongan sudah dibayar lunas!");
-                  }
+      body: asyncData.when(
+        data: (data) {
+          final Map<String, List<PotongKainModel>> sessionMap = {};
+          for (var item in data) {
+            final key = "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
+            sessionMap.putIfAbsent(key, () => []).add(item);
+          }
 
-                  // Mengelompokkan berdasarkan Sesi & Model
-                  final Map<String, PotongKainModel> grouped = {};
-                  final Map<String, int> totalPcsPerSesi = {};
-                  
-                  for (var item in belumBayar) {
-                    final key = _generateKey(item);
-                    if (!grouped.containsKey(key)) {
-                      grouped[key] = item;
-                      totalPcsPerSesi[key] = 0;
-                    }
-                    totalPcsPerSesi[key] = totalPcsPerSesi[key]! + item.hasilPcs;
-                  }
+          final unpaidSessions = sessionMap.values.where((items) => items.first.statusPembayaran == 'Belum').toList()
+            ..sort((a, b) => a.first.tanggal.compareTo(b.first.tanggal));
 
-                  return Column(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: BorderSide(color: Colors.grey.shade200)),
-                        child: Column(
-                          children: grouped.values.map((item) {
-                            final key = _generateKey(item);
-                            final isSelected = _selectedKeys.contains(key);
-                            final pcs = totalPcsPerSesi[key]!;
+          final paidSessions = sessionMap.values.where((items) => items.first.statusPembayaran == 'Lunas').toList()
+            ..sort((a, b) => b.first.tanggal.compareTo(a.first.tanggal));
 
-                            return CheckboxListTile(
-                              value: isSelected,
-                              activeColor: AppColors.primary,
-                              title: Text(item.model, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text("${DateFormat('dd MMM yyyy').format(item.tanggal)} | ${item.sesi}"),
-                              secondary: Text("$pcs Pcs", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 16)),
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == true) {
-                                    _selectedKeys.add(key);
-                                    if (!_tarifPerModel.containsKey(item.model)) {
-                                      _tarifPerModel[item.model] = 1500.0; // Default tarif bawaan
-                                    }
-                                  } else {
-                                    _selectedKeys.remove(key);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      
-                      if (_selectedKeys.isNotEmpty) ...[
-                        const SizedBox(height: 24),
-                        _buildHeader("2. Tentukan Tarif Per Model", HugeIcons.strokeRoundedWallet01),
-                        const SizedBox(height: 12),
-                        _buildTarifEditor(grouped, totalPcsPerSesi, curFormat),
-                      ]
-                    ],
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Text("Error: $err"),
-              ),
-              
-              const SizedBox(height: 32),
-              const Divider(),
-              const SizedBox(height: 16),
-              
-              _buildHeader("🗄️ Riwayat Pembayaran", HugeIcons.strokeRoundedHistory),
-              const SizedBox(height: 12),
-              _buildRiwayatPembayaran(curFormat),
-            ],
-          ),
+          return RefreshIndicator(
+            onRefresh: () async => ref.read(cuttingControllerProvider.notifier).refreshData(),
+            color: AppColors.primary,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 150),
+              children: [
+                _buildSectionHeader(Icons.fact_check_rounded, "1. Pilih Sesi yang Akan Dicairkan"),
+                const SizedBox(height: 16),
+                _buildSelectionTable(unpaidSessions),
+                const SizedBox(height: 24),
+                _buildCalculatorSection(unpaidSessions),
+                const SizedBox(height: 48),
+                _buildSectionHeader(Icons.history_rounded, "Riwayat Sesi yang Sudah Dibayar"),
+                const SizedBox(height: 16),
+                _buildHistoryTable(paidSessions),
+              ],
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        error: (err, _) => Center(child: Text("Error: $err", style: const TextStyle(color: AppColors.error))),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(IconData icon, String title) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.primary, size: 20),
+        const SizedBox(width: 12),
+        Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+      ],
+    );
+  }
+
+  Widget _buildSelectionTable(List<List<PotongKainModel>> sessions) {
+    if (sessions.isEmpty) return const SizedBox();
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface, 
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingTextStyle: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold, fontSize: 11),
+          dataTextStyle: const TextStyle(color: Colors.white70, fontSize: 11),
+          columns: const [DataColumn(label: Text("Gaji?")), DataColumn(label: Text("Tanggal")), DataColumn(label: Text("Sesi")), DataColumn(label: Text("Model")), DataColumn(label: Text("Pcs"))],
+          rows: sessions.map((items) {
+            final first = items.first;
+            final key = "${DateFormat('yyyy-MM-dd').format(first.tanggal)}_${first.sesi}_${first.model}";
+            final isSelected = _selectedSessions.contains(key);
+            final totalPcs = items.fold<int>(0, (sum, item) => sum + item.hasilPcs);
+            return DataRow(selected: isSelected, cells: [
+              DataCell(Checkbox(value: isSelected, activeColor: AppColors.primary, onChanged: (v) => setState(() { if (v!) _selectedSessions.add(key); else _selectedSessions.remove(key); }))),
+              DataCell(Text(DateFormat('dd/MM/yy').format(first.tanggal))),
+              DataCell(Text(first.sesi)),
+              DataCell(Text(first.model.toUpperCase(), style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold))),
+              DataCell(Text("$totalPcs", style: const TextStyle(color: Color(0xFF00CED1), fontWeight: FontWeight.bold))),
+            ]);
+          }).toList(),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState(String msg) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: AppColors.success, size: 40),
-          const SizedBox(height: 12),
-          Text(msg, style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTarifEditor(Map<String, PotongKainModel> grouped, Map<String, int> totalPcsPerSesi, NumberFormat curFormat) {
-    // Kumpulkan model yang dipilih untuk dikalkulasi
-    final Map<String, int> selectedModelsPcs = {};
-    for (var key in _selectedKeys) {
-      final item = grouped[key]!;
-      selectedModelsPcs[item.model] = (selectedModelsPcs[item.model] ?? 0) + totalPcsPerSesi[key]!;
-    }
-
-    int totalPcsAll = 0;
-    double totalGajiAll = 0.0;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white, 
-        borderRadius: BorderRadius.circular(12), 
-        border: BorderSide(color: AppColors.primaryLight.withOpacity(0.5), width: 2)
-      ),
-      child: Column(
-        children: [
-          ...selectedModelsPcs.entries.map((e) {
-            final model = e.key;
-            final pcs = e.value;
-            final tarif = _tarifPerModel[model] ?? 1500.0;
-            final subtotal = pcs * tarif;
-
-            totalPcsAll += pcs;
-            totalGajiAll += subtotal;
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(model, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text("$pcs Pcs", style: const TextStyle(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: TextFormField(
-                      initialValue: tarif.toInt().toString(),
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Tarif/Pcs (Rp)",
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          _tarifPerModel[model] = double.tryParse(val) ?? 0;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          
-          const Divider(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Total Produksi:", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-              Text("$totalPcsAll Pcs", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Grand Total Gaji:", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-              Text(curFormat.format(totalGajiAll), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.primary)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("💡 Untuk Cetak PDF, tambahkan package 'pdf' & 'printing' ke pubspec.yaml nantinya.")
-                    ));
-                  },
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedPrinter, color: AppColors.primary),
-                  label: const Text("Cetak Slip", style: TextStyle(color: AppColors.primary)),
-                  style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.primary), padding: const EdgeInsets.symmetric(vertical: 14)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _prosesPembayaran(grouped),
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedLockPassword, color: Colors.white),
-                  label: const Text("Bayar & Kunci", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 14)),
-                ),
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  Future<void> _prosesPembayaran(Map<String, PotongKainModel> grouped) async {
-    final controller = ref.read(cuttingControllerProvider.notifier);
-    
-    // Looping eksekusi bayar ke database
-    for (var key in _selectedKeys) {
-      final item = grouped[key]!;
-      final tarif = _tarifPerModel[item.model] ?? 1500.0;
-      await controller.bayarSesi(
-        item.tanggal.toIso8601String().split('T')[0], 
-        item.sesi, 
-        item.model, 
-        tarif
-      );
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('🎉 Pembayaran berhasil dicatat ke Riwayat!'),
-        backgroundColor: AppColors.success,
-      ));
-      setState(() {
-        _selectedKeys.clear();
-      });
-    }
-  }
-
-  Widget _buildRiwayatPembayaran(NumberFormat curFormat) {
-    // Membaca langsung dari repository untuk riwayat 20 terakhir
-    return Consumer(
-      builder: (context, ref, child) {
-        final repo = ref.read(cuttingRepositoryProvider);
-        return FutureBuilder<List<PotongKainModel>>(
-          future: repo.getSesiSudahBayar(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-            if (!snapshot.hasData || snapshot.data!.isEmpty) return const Text("Belum ada riwayat pembayaran.", style: TextStyle(color: Colors.grey));
-            
-            final data = snapshot.data!;
-            final Map<String, PotongKainModel> unique = {};
-            final Map<String, int> totalPcs = {};
-            final Map<String, double> totalGaji = {};
-
-            for (var item in data) {
-              final k = _generateKey(item);
-              unique[k] = item;
-              totalPcs[k] = (totalPcs[k] ?? 0) + item.hasilPcs;
-              totalGaji[k] = (totalGaji[k] ?? 0.0) + item.gajiTerbayar;
-            }
-
-            return Column(
-              children: unique.values.map((item) {
-                final k = _generateKey(item);
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade200)),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    leading: const CircleAvatar(backgroundColor: AppColors.background, child: HugeIcon(icon: HugeIcons.strokeRoundedMoney01, color: AppColors.success)),
-                    title: Text(item.model, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("${DateFormat('dd MMM yyyy').format(item.tanggal)} | ${item.sesi}\nTotal: ${totalPcs[k]} Pcs"),
-                    trailing: Text(curFormat.format(totalGaji[k]), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success, fontSize: 16)),
-                  ),
-                );
-              }).toList(),
-            );
-          },
-        );
+  Widget _buildCalculatorSection(List<List<PotongKainModel>> allUnpaid) {
+    if (_selectedSessions.isEmpty) return const SizedBox();
+    int totalPcs = 0;
+    for (var sess in allUnpaid) {
+      if (_selectedSessions.contains("${DateFormat('yyyy-MM-dd').format(sess.first.tanggal)}_${sess.first.sesi}_${sess.first.model}")) {
+        totalPcs += sess.fold<int>(0, (sum, item) => sum + item.hasilPcs);
       }
+    }
+    final double tarif = double.tryParse(_tarifController.text) ?? 0;
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.navBackground, 
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20)],
+      ),
+      child: Column(
+        children: [
+          Row(children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text("TARIF/PCS", style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
+              TextField(
+                controller: _tarifController, 
+                keyboardType: TextInputType.number, 
+                onChanged: (_) => setState(() {}), 
+                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                decoration: const InputDecoration(border: InputBorder.none, isDense: true, hintText: "0", hintStyle: TextStyle(color: Colors.white24)),
+              ),
+            ])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              const Text("TOTAL PCS", style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
+              Text("$totalPcs", style: const TextStyle(color: Color(0xFFFFD700), fontSize: 24, fontWeight: FontWeight.w900)),
+            ])),
+          ]),
+          const Divider(color: Colors.white10, height: 32),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text("TAMPILKAN HARGA DI PDF", style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
+            Transform.scale(
+              scale: 0.8,
+              child: Switch(value: _tampilkanHarga, onChanged: (v) => setState(() => _tampilkanHarga = v), activeColor: AppColors.primary),
+            ),
+          ]),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text("TOTAL GAJI", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            Text(currencyFmt.format(totalPcs * tarif), style: const TextStyle(color: Color(0xFF00CED1), fontSize: 22, fontWeight: FontWeight.w900)),
+          ]),
+          const SizedBox(height: 24),
+          Row(children: [
+            Expanded(child: ElevatedButton.icon(
+              onPressed: () => _cetakPdf(allUnpaid, tarif), 
+              icon: const Icon(Icons.print_rounded), 
+              label: const Text("CETAK"), 
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white10, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            )),
+            const SizedBox(width: 12),
+            Expanded(flex: 2, child: ElevatedButton(
+              onPressed: () => _prosesBayarMassal(allUnpaid, tarif), 
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.background, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: const Text("PROSES BAYAR", style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+            )),
+          ]),
+        ],
+      ),
     );
   }
 
-  Widget _buildHeader(String title, IconData icon) {
-    return Row(
-      children: [
-        HugeIcon(icon: icon, color: AppColors.primary, size: 24),
-        const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+  Future<void> _cetakPdf(List<List<PotongKainModel>> allUnpaid, double tarif) async {
+    try {
+      final pdf = pw.Document();
+      List<List<PotongKainModel>> selected = [];
+      int totalPcsAll = 0;
+      for (var sess in allUnpaid) {
+        if (_selectedSessions.contains("${DateFormat('yyyy-MM-dd').format(sess.first.tanggal)}_${sess.first.sesi}_${sess.first.model}")) {
+          selected.add(sess);
+          totalPcsAll += sess.fold<int>(0, (sum, item) => sum + item.hasilPcs);
+        }
+      }
+      if (selected.isEmpty) return;
+
+      pdf.addPage(pw.Page(build: (pw.Context context) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        _buildPdfHeader(),
+        pw.SizedBox(height: 20),
+        pw.Text('HALAMAN 1: RINGKASAN PER SESI', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14, color: PdfColors.blue700)),
+        pw.SizedBox(height: 16),
+        pw.TableHelper.fromTextArray(
+          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          headers: ['No', 'Tanggal', 'Sesi', 'Model', 'Pcs', if (_tampilkanHarga) 'Tarif', if (_tampilkanHarga) 'Subtotal'],
+          data: List.generate(selected.length, (index) {
+            final s = selected[index];
+            final p = s.fold<int>(0, (sum, i) => sum + i.hasilPcs);
+            return [(index + 1).toString(), DateFormat('dd/MM/yyyy').format(s.first.tanggal), s.first.sesi, s.first.model, p.toString(), if (_tampilkanHarga) currencyFmt.format(tarif), if (_tampilkanHarga) currencyFmt.format(p * tarif)];
+          }),
+        ),
+        pw.SizedBox(height: 40),
+        _buildPdfSummary(selected.length, totalPcsAll, tarif, _tampilkanHarga),
+      ])));
+
+      pdf.addPage(pw.MultiPage(build: (pw.Context context) => [
+        _buildPdfHeader(),
+        pw.SizedBox(height: 20),
+        pw.Text('HALAMAN 2: RINCIAN DETAIL (WARNA/ROL)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14, color: PdfColors.blue700)),
+        ...selected.map((s) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+          pw.SizedBox(height: 16),
+          pw.Container(padding: const pw.EdgeInsets.all(6), color: PdfColors.grey200, child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+            pw.Text('DETAIL: ${DateFormat('dd/MM').format(s.first.tanggal)} - ${s.first.sesi}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+            pw.Text('MODEL: ${s.first.model}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+          ])),
+          pw.TableHelper.fromTextArray(
+            headers: ['No', 'Warna', 'Kg', 'Pcs', if (_tampilkanHarga) 'Gaji'],
+            data: List.generate(s.length, (i) => [(i+1).toString(), s[i].warna, '${s[i].kgTerpakai}kg', s[i].hasilPcs.toString(), if (_tampilkanHarga) currencyFmt.format(s[i].hasilPcs * tarif)]),
+          ),
+        ])),
+        pw.SizedBox(height: 50),
+        _buildPdfFooter(),
+      ]));
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(), 
+        name: 'SlipGaji_${DateFormat('ddMM_HHmm').format(DateTime.now())}.pdf'
+      );
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"))); }
+  }
+
+  pw.Widget _buildPdfHeader() {
+    return pw.Header(level: 0, child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        pw.Text('ANSA-ENTERPRISE', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20, color: PdfColors.blue900)),
+        pw.Text('Laporan Pembayaran Gaji Cutting', style: const pw.TextStyle(fontSize: 10)),
+      ]),
+      pw.Text(DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()), style: const pw.TextStyle(fontSize: 10)),
+    ]));
+  }
+
+  pw.Widget _buildPdfSummary(int s, int p, double t, bool h) {
+    return pw.Container(padding: const pw.EdgeInsets.all(16), decoration: pw.BoxDecoration(color: PdfColors.grey100, border: pw.Border.all(color: PdfColors.grey300)), child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceAround, children: [
+      pw.Column(children: [pw.Text('TOTAL SESI', style: const pw.TextStyle(fontSize: 10)), pw.Text('$s', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))]),
+      pw.Column(children: [pw.Text('TOTAL PCS', style: const pw.TextStyle(fontSize: 10)), pw.Text('$p', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))]),
+      if (h) ...[
+        pw.Column(children: [pw.Text('TARIF', style: const pw.TextStyle(fontSize: 10)), pw.Text(currencyFmt.format(t), style: pw.TextStyle(fontWeight: pw.FontWeight.bold))]),
+        pw.Column(children: [pw.Text('GRAND TOTAL', style: const pw.TextStyle(fontSize: 10)), pw.Text(currencyFmt.format(p * t), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16, color: PdfColors.blue900))]),
       ],
+    ]));
+  }
+
+  pw.Widget _buildPdfFooter() {
+    return pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [
+      pw.Column(children: [pw.Text('Penerima,', style: const pw.TextStyle(fontSize: 10)), pw.SizedBox(height: 40), pw.Text('(____________________)')]),
+      pw.SizedBox(width: 40),
+      pw.Column(children: [pw.Text('Admin Ansa,', style: const pw.TextStyle(fontSize: 10)), pw.SizedBox(height: 40), pw.Text('(____________________)')]),
+    ]);
+  }
+
+  Widget _buildHistoryTable(List<List<PotongKainModel>> sessions) {
+    if (sessions.isEmpty) return const SizedBox();
+    return Container(
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.05))),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingTextStyle: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold, fontSize: 11),
+          columns: const [DataColumn(label: Text("Tgl")), DataColumn(label: Text("Sesi")), DataColumn(label: Text("Model")), DataColumn(label: Text("Pcs"))],
+          rows: sessions.map((s) => DataRow(cells: [
+            DataCell(Text(DateFormat('dd/MM').format(s.first.tanggal), style: const TextStyle(color: Colors.white70, fontSize: 11))),
+            DataCell(Text(s.first.sesi, style: const TextStyle(color: Colors.white70, fontSize: 11))),
+            DataCell(Text(s.first.model.toUpperCase(), style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold, fontSize: 11))),
+            DataCell(Text("${s.fold<int>(0, (sum, i) => sum + i.hasilPcs)}", style: const TextStyle(color: Color(0xFF00CED1), fontWeight: FontWeight.bold, fontSize: 11))),
+          ])).toList(),
+        ),
+      ),
     );
+  }
+
+  Future<void> _prosesBayarMassal(List<List<PotongKainModel>> allUnpaid, double tarif) async {
+    if (_selectedSessions.isEmpty) return;
+    try {
+      showDialog(context: context, builder: (c) => const Center(child: CircularProgressIndicator()));
+      List<int> ids = [];
+      for (var sess in allUnpaid) {
+        if (_selectedSessions.contains("${DateFormat('yyyy-MM-dd').format(sess.first.tanggal)}_${sess.first.sesi}_${sess.first.model}")) ids.addAll(sess.map((e) => e.id!));
+      }
+      await ref.read(cuttingControllerProvider.notifier).bayarSesi(ids, tarif);
+      if (mounted) { Navigator.pop(context); setState(() => _selectedSessions.clear()); }
+    } catch (e) { if (mounted) Navigator.pop(context); }
   }
 }
