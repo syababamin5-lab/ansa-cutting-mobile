@@ -185,7 +185,7 @@ class _InputDetailScreenState extends ConsumerState<InputDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("BAKUL POTONGAN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary, letterSpacing: 1.5)),
+                    const Text("RINCIAN KAIN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary, letterSpacing: 1.5)),
                     GestureDetector(
                       onTap: _addNewRow,
                       child: Container(

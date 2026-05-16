@@ -22,56 +22,86 @@ class _InputViewState extends ConsumerState<InputView> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('MANAJEMEN POTONG', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 18)),
+        title: const Text('MANAJEMEN POTONG',
+            style: TextStyle(
+                fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 18)),
         centerTitle: false,
       ),
       body: RefreshIndicator(
-        onRefresh: () async => ref.read(cuttingControllerProvider.notifier).refreshData(),
+        onRefresh: () async =>
+            ref.read(cuttingControllerProvider.notifier).refreshData(),
         color: AppColors.primary,
         backgroundColor: AppColors.surface,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 150),
           children: [
-            _buildHeaderSection(Icons.assignment_turned_in_rounded, "SESI BELUM SELESAI"),
+            _buildHeaderSection(
+                Icons.assignment_turned_in_rounded, "SESI BELUM SELESAI"),
             const SizedBox(height: 16),
             draftAsync.when(
               data: (draftItems) {
                 final Map<String, List<PotongKainModel>> groupedDraft = {};
                 for (var item in draftItems) {
-                  final key = "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
+                  final key =
+                      "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
                   groupedDraft.putIfAbsent(key, () => []).add(item);
                 }
                 final sortedDrafts = groupedDraft.values.toList()
                   ..sort((a, b) => b.first.tanggal.compareTo(a.first.tanggal));
 
-                if (sortedDrafts.isEmpty) return _buildEmptyState("Tidak Ada Sesi Aktif", "Silakan buka sesi baru di bawah");
-                return Column(children: sortedDrafts.map((items) => _buildSessionCard(context, items, true)).toList());
+                if (sortedDrafts.isEmpty) {
+                  return _buildEmptyState("Tidak Ada Sesi Aktif",
+                      "Silakan buka sesi baru di bawah");
+                }
+                return Column(
+                    children: sortedDrafts
+                        .map((items) => _buildSessionCard(context, items, true))
+                        .toList());
               },
-              loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.primary))),
+              loading: () => const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary))),
               error: (err, _) => Center(child: Text("Error: $err")),
             ),
-
             const SizedBox(height: 40),
-
             _buildHeaderSection(Icons.history_rounded, "RIWAYAT SESI HARI INI"),
             const SizedBox(height: 16),
             selesaiAsync.when(
               data: (selesaiItems) {
-                final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-                final todayFinished = selesaiItems.where((item) => DateFormat('yyyy-MM-dd').format(item.tanggal) == todayStr).toList();
-                
+                final todayStr =
+                    DateFormat('yyyy-MM-dd').format(DateTime.now());
+                final todayFinished = selesaiItems
+                    .where((item) =>
+                        DateFormat('yyyy-MM-dd').format(item.tanggal) ==
+                        todayStr)
+                    .toList();
+
                 final Map<String, List<PotongKainModel>> groupedToday = {};
                 for (var item in todayFinished) {
-                  final key = "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
+                  final key =
+                      "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
                   groupedToday.putIfAbsent(key, () => []).add(item);
                 }
                 final sortedToday = groupedToday.values.toList()
                   ..sort((a, b) => b.first.tanggal.compareTo(a.first.tanggal));
 
-                if (sortedToday.isEmpty) return _buildEmptyState("Belum Ada Sesi Selesai", "Sesi yang selesai hari ini akan muncul di sini");
-                return Column(children: sortedToday.map((items) => _buildSessionCard(context, items, false)).toList());
+                if (sortedToday.isEmpty) {
+                  return _buildEmptyState("Belum Ada Sesi Selesai",
+                      "Sesi yang selesai hari ini akan muncul di sini");
+                }
+                return Column(
+                    children: sortedToday
+                        .map(
+                            (items) => _buildSessionCard(context, items, false))
+                        .toList());
               },
-              loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.primary))),
+              loading: () => const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary))),
               error: (err, _) => Center(child: Text("Error: $err")),
             ),
           ],
@@ -79,12 +109,33 @@ class _InputViewState extends ConsumerState<InputView> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80),
-        child: FloatingActionButton.extended(
-          onPressed: () => _showNewSessionModal(context),
-          backgroundColor: AppColors.primary,
-          icon: const Icon(Icons.add_rounded, color: AppColors.background, size: 28),
-          label: const Text("BUKA SESI BARU", style: TextStyle(color: AppColors.background, fontWeight: FontWeight.w900, letterSpacing: 1)),
+        padding: const EdgeInsets.only(bottom: 90),
+        child: GestureDetector(
+          onTap: () => _showNewSessionModal(context),
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary,
+                  AppColors.primary.withOpacity(0.8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.add_rounded,
+                color: AppColors.background, size: 32),
+          ),
         ),
       ),
     );
@@ -95,17 +146,24 @@ class _InputViewState extends ConsumerState<InputView> {
       children: [
         Icon(icon, color: AppColors.primary, size: 18),
         const SizedBox(width: 12),
-        Text(title, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+        Text(title,
+            style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5)),
       ],
     );
   }
 
-  Widget _buildSessionCard(BuildContext context, List<PotongKainModel> items, bool isDraft) {
+  Widget _buildSessionCard(
+      BuildContext context, List<PotongKainModel> items, bool isDraft) {
     final first = items.first;
     final totalPcs = items.fold<int>(0, (sum, item) => sum + item.hasilPcs);
     final totalKg = items.fold<double>(0, (sum, item) => sum + item.kgTerpakai);
     final totalRol = items.where((e) => e.warna.isNotEmpty).length;
-    final displayRol = (totalRol == 0 && (totalKg > 0 || totalPcs > 0)) ? 1 : totalRol;
+    final displayRol =
+        (totalRol == 0 && (totalKg > 0 || totalPcs > 0)) ? 1 : totalRol;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -113,17 +171,28 @@ class _InputViewState extends ConsumerState<InputView> {
         children: [
           GestureDetector(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => InputDetailScreen(session: first, isDraft: isDraft)),
-              );
+              if (isDraft) {
+                // Jika masih draft, langsung masuk ke detail
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          InputDetailScreen(session: first, isDraft: isDraft)),
+                );
+              } else {
+                // Jika sudah selesai, tampilkan pop-up rincian dulu
+                _showSessionSummaryPopup(context, first, items, isDraft);
+              }
             },
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: isDraft ? Colors.white.withOpacity(0.05) : AppColors.success.withOpacity(0.1)),
+                border: Border.all(
+                    color: isDraft
+                        ? AppColors.warning.withOpacity(0.3)
+                        : AppColors.success.withOpacity(0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,25 +204,47 @@ class _InputViewState extends ConsumerState<InputView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(first.model.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                            Text(first.model.toUpperCase(),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1)),
                             const SizedBox(height: 4),
-                            Text("${DateFormat('dd MMM yyyy').format(first.tanggal)} | ${first.sesi}", style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11, fontWeight: FontWeight.bold)),
+                            Text(
+                                "${DateFormat('dd MMM yyyy').format(first.tanggal)} | ${first.sesi}",
+                                style: TextStyle(
+                                    color: Colors.white.withOpacity(0.4),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
-                      if (!isDraft)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                          child: const Text("SELESAI", style: TextStyle(color: AppColors.success, fontSize: 8, fontWeight: FontWeight.bold)),
-                        )
-                      else
-                        const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primary, size: 14),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                            color: isDraft 
+                                ? AppColors.warning.withOpacity(0.1) 
+                                : AppColors.success.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: isDraft 
+                                    ? AppColors.warning.withOpacity(0.2) 
+                                    : AppColors.success.withOpacity(0.2))),
+                        child: Text(isDraft ? "PROGRES" : "SELESAI",
+                            style: TextStyle(
+                                color: isDraft ? AppColors.warning : AppColors.success,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1)),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 16),
                     decoration: BoxDecoration(
                       color: AppColors.navBackground.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(20),
@@ -161,9 +252,12 @@ class _InputViewState extends ConsumerState<InputView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatItem("ROL", displayRol.toString(), Colors.white70),
-                        _buildStatItem("KG", totalKg.toStringAsFixed(1), const Color(0xFF00CED1)), // BIRU UNTUK KG
-                        _buildStatItem("PCS", totalPcs.toString(), const Color(0xFFFFD700)), // KUNING UNTUK PCS
+                        _buildStatItem(
+                            "ROL", displayRol.toString(), Colors.white70),
+                        _buildStatItem("KG", totalKg.toStringAsFixed(1),
+                            const Color(0xFF00CED1)), // BIRU UNTUK KG
+                        _buildStatItem("PCS", totalPcs.toString(),
+                            const Color(0xFFFFD700)), // KUNING UNTUK PCS
                       ],
                     ),
                   ),
@@ -172,10 +266,14 @@ class _InputViewState extends ConsumerState<InputView> {
             ),
           ),
           Positioned(
-            right: 30, top: 20,
+            right: -10,
+            bottom: -10,
             child: Opacity(
-              opacity: 0.1,
-              child: Icon(isDraft ? Icons.auto_awesome : Icons.check_circle_rounded, color: Colors.white, size: 40),
+              opacity: 0.05,
+              child: Icon(
+                  isDraft ? Icons.pending_actions_rounded : Icons.check_circle_rounded,
+                  color: isDraft ? AppColors.warning : AppColors.success,
+                  size: 80),
             ),
           ),
         ],
@@ -186,9 +284,16 @@ class _InputViewState extends ConsumerState<InputView> {
   Widget _buildStatItem(String label, String value, Color valueColor) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        Text(label,
+            style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1)),
         const SizedBox(height: 6),
-        Text(value, style: TextStyle(color: valueColor, fontSize: 20, fontWeight: FontWeight.w900)),
+        Text(value,
+            style: TextStyle(
+                color: valueColor, fontSize: 20, fontWeight: FontWeight.w900)),
       ],
     );
   }
@@ -197,14 +302,23 @@ class _InputViewState extends ConsumerState<InputView> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(color: AppColors.surface.withOpacity(0.5), borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(
+          color: AppColors.surface.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(24)),
       child: Column(
         children: [
-          const Icon(Icons.inventory_2_outlined, color: Colors.white10, size: 40),
+          const Icon(Icons.inventory_2_outlined,
+              color: Colors.white10, size: 40),
           const SizedBox(height: 16),
-          Text(title, style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text(title,
+              style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(sub, style: const TextStyle(color: Colors.white24, fontSize: 10), textAlign: TextAlign.center),
+          Text(sub,
+              style: const TextStyle(color: Colors.white24, fontSize: 10),
+              textAlign: TextAlign.center),
         ],
       ),
     );
@@ -221,7 +335,8 @@ class _InputViewState extends ConsumerState<InputView> {
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           decoration: const BoxDecoration(
             color: AppColors.background,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
@@ -232,9 +347,13 @@ class _InputViewState extends ConsumerState<InputView> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("BUKA SESI BARU", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                const Text("BUKA SESI BARU",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1)),
                 const SizedBox(height: 32),
-                
                 InkWell(
                   onTap: () async {
                     final picked = await showDatePicker(
@@ -244,7 +363,10 @@ class _InputViewState extends ConsumerState<InputView> {
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                       builder: (context, child) => Theme(
                         data: Theme.of(context).copyWith(
-                          colorScheme: const ColorScheme.dark(primary: AppColors.primary, onPrimary: AppColors.background, surface: AppColors.surface),
+                          colorScheme: const ColorScheme.dark(
+                              primary: AppColors.primary,
+                              onPrimary: AppColors.background,
+                              surface: AppColors.surface),
                         ),
                         child: child!,
                       ),
@@ -255,50 +377,77 @@ class _InputViewState extends ConsumerState<InputView> {
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16)),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+                        const Icon(Icons.calendar_month_rounded,
+                            color: AppColors.primary),
                         const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text("TANGGAL CUTTING", style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
-                            Text(DateFormat('EEEE, dd MMMM yyyy').format(selectedDate), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            const Text("TANGGAL CUTTING",
+                                style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold)),
+                            Text(
+                                DateFormat('EEEE, dd MMMM yyyy')
+                                    .format(selectedDate),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ],
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 16),
                 TextField(
                   onChanged: (val) => modelName = val,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
                     labelText: "NAMA MODEL",
-                    labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+                    labelStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
                     filled: true,
                     fillColor: AppColors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    prefixIcon: const Icon(Icons.style_rounded, color: AppColors.primary),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none),
+                    prefixIcon: const Icon(Icons.style_rounded,
+                        color: AppColors.primary),
                   ),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: sesiName,
+                  initialValue: sesiName,
                   dropdownColor: AppColors.surface,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
                     labelText: "PILIH SESI",
-                    labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+                    labelStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
                     filled: true,
                     fillColor: AppColors.surface,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    prefixIcon: const Icon(Icons.access_time_filled_rounded, color: AppColors.primary),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none),
+                    prefixIcon: const Icon(Icons.access_time_filled_rounded,
+                        color: AppColors.primary),
                   ),
-                  items: ['Sesi 1', 'Sesi 2', 'Sesi 3', 'Sesi 4', 'Sesi 5'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                  items: ['Sesi 1', 'Sesi 2', 'Sesi 3', 'Sesi 4', 'Sesi 5']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
                   onChanged: (val) => sesiName = val!,
                 ),
                 const SizedBox(height: 32),
@@ -318,21 +467,32 @@ class _InputViewState extends ConsumerState<InputView> {
                         statusPembayaran: 'Belum',
                         gajiTerbayar: 0,
                       );
-                      
-                      await ref.read(cuttingControllerProvider.notifier).simpanSesiBaru(newSesi);
-                      
+
+                      await ref
+                          .read(cuttingControllerProvider.notifier)
+                          .simpanSesiBaru(newSesi);
+
                       if (mounted) {
                         Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => InputDetailScreen(session: newSesi, isDraft: true)));
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => InputDetailScreen(
+                                    session: newSesi, isDraft: true)));
                       }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.background,
                       padding: const EdgeInsets.symmetric(vertical: 20),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: const Text("MULAI MENCATAT", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1)),
+                    child: const Text("MULAI MENCATAT",
+                        style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            letterSpacing: 1)),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -341,6 +501,182 @@ class _InputViewState extends ConsumerState<InputView> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showSessionSummaryPopup(BuildContext context, PotongKainModel first,
+      List<PotongKainModel> items, bool isDraft) {
+    final totalPcs = items.fold<int>(0, (sum, item) => sum + item.hasilPcs);
+    final totalKg = items.fold<double>(0, (sum, item) => sum + item.kgTerpakai);
+    final totalRol = items.where((e) => e.warna.isNotEmpty).length;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("RINCIAN CUTTING",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1)),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                )
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildPopupInfoRow("Nama Model", first.model.toUpperCase()),
+            _buildPopupInfoRow("Tanggal",
+                DateFormat('EEEE, dd MMMM yyyy').format(first.tanggal)),
+            _buildPopupInfoRow("Sesi", first.sesi),
+            const Divider(color: Colors.white10, height: 32),
+            const Text("RINCIAN PER WARNA",
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5)),
+            const SizedBox(height: 16),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  if (item.warna.isEmpty && item.kgTerpakai == 0)
+                    return const SizedBox();
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Text("${index + 1}.", 
+                                style: const TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                  item.warna.isEmpty
+                                      ? "Tanpa Warna"
+                                      : item.warna.toUpperCase(),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13)),
+                            ),
+                            Text("${item.kgTerpakai} Kg",
+                                style: const TextStyle(
+                                    color: Color(0xFF00CED1),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 16),
+                            Text("${item.hasilPcs} Pcs",
+                                style: const TextStyle(
+                                    color: Color(0xFFFFD700),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                      if (index < items.length - 1)
+                        const Divider(color: Colors.white10, height: 1),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const Divider(color: Colors.white10, height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildPopupStat("TOTAL ROL", totalRol.toString(), Colors.white),
+                _buildPopupStat("TOTAL KG", totalKg.toStringAsFixed(1),
+                    const Color(0xFF00CED1)),
+                _buildPopupStat(
+                    "TOTAL PCS", totalPcs.toString(), const Color(0xFFFFD700)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => InputDetailScreen(
+                            session: first, isDraft: isDraft)),
+                  );
+                },
+                icon: const Icon(Icons.edit_note_rounded),
+                label: const Text("EDIT DATA CUTTING",
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900, letterSpacing: 1)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPopupInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPopupStat(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 9, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w900)),
+      ],
     );
   }
 }

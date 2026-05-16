@@ -53,10 +53,10 @@ class CuttingController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> bayarSesi(List<int> ids, double tarifPerPcs) async {
+  Future<void> bayarSesi(List<int> ids, double tarifPerPcs, {DateTime? tglBayar}) async {
     state = const AsyncValue.loading();
     try {
-      await ref.read(cuttingRepositoryProvider).bayarSesi(ids, tarifPerPcs);
+      await ref.read(cuttingRepositoryProvider).bayarSesi(ids, tarifPerPcs, tglBayar: tglBayar);
       state = const AsyncValue.data(null);
       refreshData();
     } catch (e, stack) {

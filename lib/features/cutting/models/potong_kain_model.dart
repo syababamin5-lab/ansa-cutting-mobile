@@ -9,6 +9,7 @@ class PotongKainModel {
   final String status;
   final String statusPembayaran;
   final double gajiTerbayar;
+  final DateTime? tanggalBayar; // Field Baru
 
   PotongKainModel({
     this.id,
@@ -21,6 +22,7 @@ class PotongKainModel {
     required this.status,
     required this.statusPembayaran,
     required this.gajiTerbayar,
+    this.tanggalBayar,
   });
 
   PotongKainModel copyWith({
@@ -34,6 +36,7 @@ class PotongKainModel {
     String? status,
     String? statusPembayaran,
     double? gajiTerbayar,
+    DateTime? tanggalBayar,
   }) {
     return PotongKainModel(
       id: id ?? this.id,
@@ -46,11 +49,11 @@ class PotongKainModel {
       status: status ?? this.status,
       statusPembayaran: statusPembayaran ?? this.statusPembayaran,
       gajiTerbayar: gajiTerbayar ?? this.gajiTerbayar,
+      tanggalBayar: tanggalBayar ?? this.tanggalBayar,
     );
   }
 
   factory PotongKainModel.fromJson(Map<String, dynamic> json) {
-    // Mencoba berbagai kemungkinan nama kolom berat/kg
     final rawKg = json['kg_terpakai'] ?? json['kg'] ?? json['berat'] ?? 0;
     
     return PotongKainModel(
@@ -62,23 +65,27 @@ class PotongKainModel {
       kgTerpakai: double.tryParse(rawKg.toString()) ?? 0.0,
       hasilPcs: json['hasil_pcs'] ?? 0,
       status: json['status'] ?? 'Draft',
-      statusPembayaran: json['status'] == 'Lunas' ? 'Lunas' : 'Belum',
-      gajiTerbayar: 0.0,
+      statusPembayaran: json['status_pembayaran'] ?? (json['status'] == 'Lunas' ? 'Lunas' : 'Belum'),
+      gajiTerbayar: double.tryParse(json['gaji_terbayar']?.toString() ?? '0') ?? 0.0,
+      tanggalBayar: json['tanggal_bayar'] != null 
+          ? DateTime.tryParse(json['tanggal_bayar'].toString()) 
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
-    // HANYA kirim kolom yang pasti ada di database standar
-    final map = {
+    return {
       if (id != null) 'id': id,
       'tanggal': tanggal.toIso8601String().split('T')[0],
       'sesi': sesi,
       'model': model,
       'warna': warna,
-      'kg_terpakai': kgTerpakai, // Gunakan nama kolom yang paling standar
+      'kg_terpakai': kgTerpakai,
       'hasil_pcs': hasilPcs,
       'status': status,
+      'status_pembayaran': statusPembayaran,
+      'gaji_terbayar': gajiTerbayar,
+      if (tanggalBayar != null) 'tanggal_bayar': tanggalBayar!.toIso8601String().split('T')[0],
     };
-    return map;
   }
 }

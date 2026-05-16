@@ -23,7 +23,9 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('STATISTIK CUTTING', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 18)),
+        title: const Text('STATISTIK CUTTING',
+            style: TextStyle(
+                fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 18)),
         centerTitle: false,
         actions: [
           Container(
@@ -33,7 +35,8 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 20),
+              icon: const Icon(Icons.calendar_month_rounded,
+                  color: Colors.white, size: 20),
               tooltip: "Filter Tanggal",
               onPressed: _showDateRangePicker,
             ),
@@ -43,47 +46,56 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
       body: asyncData.when(
         data: (data) {
           if (data.isEmpty) {
-            return const Center(child: Text("Belum ada data produksi yang selesai.", style: TextStyle(color: AppColors.textSecondary)));
+            return const Center(
+                child: Text("Belum ada data produksi yang selesai.",
+                    style: TextStyle(color: AppColors.textSecondary)));
           }
 
-          final sortedData = List<PotongKainModel>.from(data)..sort((a, b) => a.tanggal.compareTo(b.tanggal));
+          final sortedData = List<PotongKainModel>.from(data)
+            ..sort((a, b) => a.tanggal.compareTo(b.tanggal));
           _startDate ??= sortedData.first.tanggal;
           _endDate ??= sortedData.last.tanggal;
 
           final filteredData = data.where((item) {
             final t = item.tanggal;
-            return t.isAfter(_startDate!.subtract(const Duration(days: 1))) && 
-                   t.isBefore(_endDate!.add(const Duration(days: 1)));
+            return t.isAfter(_startDate!.subtract(const Duration(days: 1))) &&
+                t.isBefore(_endDate!.add(const Duration(days: 1)));
           }).toList();
 
           if (filteredData.isEmpty) {
-            return const Center(child: Text("Tidak ada data pada rentang tanggal tersebut.", style: TextStyle(color: AppColors.textSecondary)));
+            return const Center(
+                child: Text("Tidak ada data pada rentang tanggal tersebut.",
+                    style: TextStyle(color: AppColors.textSecondary)));
           }
 
           int totalPcs = 0;
           double totalKg = 0.0;
           Map<String, int> modelCount = {};
-          
+
           for (var item in filteredData) {
             totalPcs += item.hasilPcs;
             totalKg += item.kgTerpakai;
-            modelCount[item.model] = (modelCount[item.model] ?? 0) + item.hasilPcs;
+            modelCount[item.model] =
+                (modelCount[item.model] ?? 0) + item.hasilPcs;
           }
 
           double rasio = totalKg > 0 ? totalPcs / totalKg : 0.0;
-          final topModels = modelCount.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+          final topModels = modelCount.entries.toList()
+            ..sort((a, b) => b.value.compareTo(a.value));
           final maxModelPcs = topModels.isNotEmpty ? topModels.first.value : 1;
 
           final Map<String, List<PotongKainModel>> historyGrouped = {};
           for (var item in filteredData) {
-            final key = "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
+            final key =
+                "${DateFormat('yyyy-MM-dd').format(item.tanggal)}_${item.sesi}_${item.model}";
             historyGrouped.putIfAbsent(key, () => []).add(item);
           }
           final sortedSessions = historyGrouped.values.toList()
             ..sort((a, b) => b.first.tanggal.compareTo(a.first.tanggal));
 
           return RefreshIndicator(
-            onRefresh: () async => ref.read(cuttingControllerProvider.notifier).refreshData(),
+            onRefresh: () async =>
+                ref.read(cuttingControllerProvider.notifier).refreshData(),
             color: AppColors.primary,
             backgroundColor: AppColors.surface,
             child: ListView(
@@ -95,9 +107,17 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: _buildSmallMetricCard("BAHAN TERPAKAI", "${totalKg.toStringAsFixed(1)} Kg", const Color(0xFF00CED1))),
+                    Expanded(
+                        child: _buildSmallMetricCard(
+                            "BAHAN TERPAKAI",
+                            "${totalKg.toStringAsFixed(1)} Kg",
+                            const Color(0xFF00CED1))),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildSmallMetricCard("RATA-RATA", "${rasio.toStringAsFixed(1)} Pcs/Kg", AppColors.primary)),
+                    Expanded(
+                        child: _buildSmallMetricCard(
+                            "RATA-RATA",
+                            "${rasio.toStringAsFixed(1)} Pcs/Kg",
+                            AppColors.primary)),
                   ],
                 ),
                 const SizedBox(height: 32),
@@ -108,25 +128,38 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.history_rounded, color: AppColors.primary, size: 20),
+                        Icon(Icons.history_rounded,
+                            color: AppColors.primary, size: 20),
                         SizedBox(width: 12),
-                        Text("RIWAYAT PER SESI", style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                        Text("RIWAYAT PER SESI",
+                            style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2)),
                       ],
                     ),
                     InkWell(
                       onTap: _showDateRangePicker,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                          border: Border.all(
+                              color: AppColors.primary.withOpacity(0.2)),
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.filter_list_rounded, color: AppColors.primary, size: 14),
+                            Icon(Icons.filter_list_rounded,
+                                color: AppColors.primary, size: 14),
                             SizedBox(width: 6),
-                            Text("FILTER", style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold)),
+                            Text("FILTER",
+                                style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -134,15 +167,19 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ...sortedSessions.map((items) => _buildSessionHistoryItem(items)),
+                ...sortedSessions
+                    .map((items) => _buildSessionHistoryItem(items)),
                 const SizedBox(height: 32),
                 _buildDynamicDetailSection(filteredData),
               ],
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (err, _) => Center(child: Text("Error: $err", style: const TextStyle(color: AppColors.error))),
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.primary)),
+        error: (err, _) => Center(
+            child: Text("Error: $err",
+                style: const TextStyle(color: AppColors.error))),
       ),
     );
   }
@@ -153,7 +190,8 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
       final dateKey = DateFormat('yyyy-MM-dd').format(item.tanggal);
       dateGrouped.putIfAbsent(dateKey, () => []).add(item);
     }
-    final sortedDates = dateGrouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    final sortedDates = dateGrouped.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
 
     return Container(
       decoration: BoxDecoration(
@@ -168,15 +206,21 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
             children: [
               Icon(Icons.analytics_rounded, color: Color(0xFF00CED1), size: 18),
               SizedBox(width: 12),
-              Text("Detail Laporan Dinamis", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              Text("Detail Laporan Dinamis",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           iconColor: Colors.white,
           collapsedIconColor: Colors.white,
           children: sortedDates.map((dateKey) {
             final dateItems = dateGrouped[dateKey]!;
-            final dayTotalPcs = dateItems.fold<int>(0, (sum, item) => sum + item.hasilPcs);
-            final dayTotalKg = dateItems.fold<double>(0, (sum, item) => sum + item.kgTerpakai);
+            final dayTotalPcs =
+                dateItems.fold<int>(0, (sum, item) => sum + item.hasilPcs);
+            final dayTotalKg =
+                dateItems.fold<double>(0, (sum, item) => sum + item.kgTerpakai);
 
             final Map<String, List<PotongKainModel>> sessionGrouped = {};
             for (var item in dateItems) {
@@ -194,37 +238,58 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
               child: ExpansionTile(
                 title: Text(
                   DateFormat('EEEE, dd MMM').format(DateTime.parse(dateKey)),
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold),
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildTag(dayTotalKg.toStringAsFixed(1), "KG", const Color(0xFF00CED1)),
+                    _buildTag(dayTotalKg.toStringAsFixed(1), "KG",
+                        const Color(0xFF00CED1)),
                     const SizedBox(width: 8),
-                    _buildTag(dayTotalPcs.toString(), "PCS", const Color(0xFFFFD700)),
+                    _buildTag(
+                        dayTotalPcs.toString(), "PCS", const Color(0xFFFFD700)),
                     const SizedBox(width: 8),
-                    const Icon(Icons.expand_more_rounded, color: Colors.white38, size: 18),
+                    const Icon(Icons.expand_more_rounded,
+                        color: Colors.white38, size: 18),
                   ],
                 ),
                 children: sortedSessKeys.map((sessKey) {
                   final items = sessionGrouped[sessKey]!;
-                  final sessTotalPcs = items.fold<int>(0, (sum, item) => sum + item.hasilPcs);
-                  final sessTotalKg = items.fold<double>(0, (sum, item) => sum + item.kgTerpakai);
+                  final sessTotalPcs =
+                      items.fold<int>(0, (sum, item) => sum + item.hasilPcs);
+                  final sessTotalKg = items.fold<double>(
+                      0, (sum, item) => sum + item.kgTerpakai);
 
                   return Container(
-                    margin: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+                    margin:
+                        const EdgeInsets.only(left: 12, right: 12, bottom: 8),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceLight.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ExpansionTile(
-                      title: Text(sessKey, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+                      title: Text(sessKey,
+                          style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text("${sessTotalKg.toStringAsFixed(1)}kg", style: const TextStyle(color: Color(0xFF00CED1), fontSize: 10, fontWeight: FontWeight.bold)),
+                          Text("${sessTotalKg.toStringAsFixed(1)}kg",
+                              style: const TextStyle(
+                                  color: Color(0xFF00CED1),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold)),
                           const SizedBox(width: 8),
-                          Text("$sessTotalPcs", style: const TextStyle(color: Color(0xFFFFD700), fontSize: 11, fontWeight: FontWeight.w900)),
+                          Text("$sessTotalPcs",
+                              style: const TextStyle(
+                                  color: Color(0xFFFFD700),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900)),
                         ],
                       ),
                       children: [
@@ -249,29 +314,72 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
         children: [
           const Row(
             children: [
-              Expanded(flex: 3, child: Text("WARNA", style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1))),
-              Expanded(flex: 2, child: Text("KG", style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1), textAlign: TextAlign.center)),
-              Expanded(flex: 2, child: Text("PCS", style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1), textAlign: TextAlign.right)),
+              Expanded(
+                  flex: 3,
+                  child: Text("WARNA",
+                      style: TextStyle(
+                          color: Colors.white38,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1))),
+              Expanded(
+                  flex: 2,
+                  child: Text("KG",
+                      style: TextStyle(
+                          color: Colors.white38,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1),
+                      textAlign: TextAlign.center)),
+              Expanded(
+                  flex: 2,
+                  child: Text("PCS",
+                      style: TextStyle(
+                          color: Colors.white38,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1),
+                      textAlign: TextAlign.right)),
             ],
           ),
           const SizedBox(height: 12),
           const Divider(color: Colors.white10, height: 1),
           const SizedBox(height: 12),
           ...items.map((item) => Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Row(
-                  children: [
-                    Expanded(flex: 3, child: Text(item.warna, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold))),
-                    Expanded(flex: 2, child: Text(item.kgTerpakai.toStringAsFixed(1), style: const TextStyle(color: Color(0xFF00CED1), fontSize: 14, fontWeight: FontWeight.w900), textAlign: TextAlign.center)),
-                    Expanded(flex: 2, child: Text(item.hasilPcs.toString(), style: const TextStyle(color: Color(0xFFFFD700), fontSize: 14, fontWeight: FontWeight.w900), textAlign: TextAlign.right)),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.white10, height: 1),
-            ],
-          )).toList(),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                            flex: 3,
+                            child: Text(item.warna,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold))),
+                        Expanded(
+                            flex: 2,
+                            child: Text(item.kgTerpakai.toStringAsFixed(1),
+                                style: const TextStyle(
+                                    color: Color(0xFF00CED1),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900),
+                                textAlign: TextAlign.center)),
+                        Expanded(
+                            flex: 2,
+                            child: Text(item.hasilPcs.toString(),
+                                style: const TextStyle(
+                                    color: Color(0xFFFFD700),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900),
+                                textAlign: TextAlign.right)),
+                      ],
+                    ),
+                  ),
+                  const Divider(color: Colors.white10, height: 1),
+                ],
+              )),
         ],
       ),
     );
@@ -287,9 +395,15 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
       ),
       child: Row(
         children: [
-          Text(value, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900)),
+          Text(value,
+              style: TextStyle(
+                  color: color, fontSize: 10, fontWeight: FontWeight.w900)),
           const SizedBox(width: 2),
-          Text(unit, style: TextStyle(color: color.withOpacity(0.6), fontSize: 7, fontWeight: FontWeight.bold)),
+          Text(unit,
+              style: TextStyle(
+                  color: color.withOpacity(0.6),
+                  fontSize: 7,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -301,15 +415,19 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight.withOpacity(0.5), 
-        borderRadius: BorderRadius.circular(16)
-      ),
+          color: AppColors.surfaceLight.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(16)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.date_range_rounded, color: AppColors.primary, size: 16),
+          const Icon(Icons.date_range_rounded,
+              color: AppColors.primary, size: 16),
           const SizedBox(width: 8),
-          Text("${fmt.format(_startDate!)}  -  ${fmt.format(_endDate!)}", style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+          Text("${fmt.format(_startDate!)}  -  ${fmt.format(_endDate!)}",
+              style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12)),
         ],
       ),
     );
@@ -330,22 +448,37 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
           Positioned(
             right: -10,
             top: -10,
-            child: Icon(Icons.auto_awesome, color: Colors.white.withOpacity(0.05), size: 100),
+            child: Icon(Icons.auto_awesome,
+                color: Colors.white.withOpacity(0.05), size: 100),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text("TOTAL OUTPUT", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              const Text("TOTAL OUTPUT",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2)),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(fmt.format(pcs), style: const TextStyle(color: Color(0xFFFFD700), fontSize: 56, fontWeight: FontWeight.w900, height: 1)),
+                  Text(fmt.format(pcs),
+                      style: const TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 56,
+                          fontWeight: FontWeight.w900,
+                          height: 1)),
                   const SizedBox(width: 8),
                   const Padding(
                     padding: EdgeInsets.only(bottom: 10),
-                    child: Text("PCS", style: TextStyle(color: Color(0xFFFFD700), fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text("PCS",
+                        style: TextStyle(
+                            color: Color(0xFFFFD700),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -365,9 +498,18 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
       ),
       child: Column(
         children: [
-          Text(title, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5), textAlign: TextAlign.center),
+          Text(title,
+              style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5),
+              textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          Text(value, style: TextStyle(color: valueColor, fontSize: 22, fontWeight: FontWeight.w900), textAlign: TextAlign.center),
+          Text(value,
+              style: TextStyle(
+                  color: valueColor, fontSize: 22, fontWeight: FontWeight.w900),
+              textAlign: TextAlign.center),
         ],
       ),
     );
@@ -386,14 +528,21 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
         children: [
           const Row(
             children: [
-              Icon(Icons.workspace_premium_rounded, color: AppColors.primary, size: 20),
+              Icon(Icons.workspace_premium_rounded,
+                  color: AppColors.primary, size: 20),
               SizedBox(width: 12),
-              Text("TOP MODEL", style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              Text("TOP MODEL",
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2)),
             ],
           ),
           const SizedBox(height: 24),
           if (models.isEmpty)
-             const Text("Belum ada data", style: TextStyle(color: Colors.white54))
+            const Text("Belum ada data",
+                style: TextStyle(color: Colors.white54))
           else
             ...models.take(5).map((item) {
               double ratio = maxPcs > 0 ? item.value / maxPcs : 0;
@@ -405,12 +554,23 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(item.key.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+                        Text(item.key.toUpperCase(),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12)),
                         Row(
                           children: [
-                            Text(fmt.format(item.value), style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.w900, fontSize: 14)),
+                            Text(fmt.format(item.value),
+                                style: const TextStyle(
+                                    color: Color(0xFFFFD700),
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14)),
                             const SizedBox(width: 4),
-                            const Text("pcs", style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+                            const Text("pcs",
+                                style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 10)),
                           ],
                         ),
                       ],
@@ -428,7 +588,7 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                         widthFactor: ratio,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: AppColors.progressBar, 
+                            color: AppColors.progressBar,
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
@@ -437,7 +597,7 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
         ],
       ),
     );
@@ -469,16 +629,34 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(first.model.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      Text(first.model.toUpperCase(),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1)),
                       const SizedBox(height: 4),
-                      Text("${DateFormat('dd MMM yyyy').format(first.tanggal)} | ${first.sesi}", style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(
+                          "${DateFormat('dd MMM yyyy').format(first.tanggal)} | ${first.sesi}",
+                          style: TextStyle(
+                              color: Colors.white.withOpacity(0.4),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                  child: const Text("SELESAI", style: TextStyle(color: AppColors.primary, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: const Text("SELESAI",
+                      style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1)),
                 )
               ],
             ),
@@ -493,8 +671,10 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildMiniStat("ROL", totalRol.toString(), Colors.white70),
-                  _buildMiniStat("KG", totalKg.toStringAsFixed(1), const Color(0xFF00CED1)),
-                  _buildMiniStat("PCS", totalPcs.toString(), const Color(0xFFFFD700)),
+                  _buildMiniStat("KG", totalKg.toStringAsFixed(1),
+                      const Color(0xFF00CED1)),
+                  _buildMiniStat(
+                      "PCS", totalPcs.toString(), const Color(0xFFFFD700)),
                 ],
               ),
             ),
@@ -525,12 +705,16 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
               Center(
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 12),
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -538,14 +722,25 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(first.model.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                          Text(first.model.toUpperCase(),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1)),
                           const SizedBox(height: 4),
-                          Text(DateFormat('EEEE, dd MMMM yyyy').format(first.tanggal), style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                          Text(
+                              DateFormat('EEEE, dd MMMM yyyy')
+                                  .format(first.tanggal),
+                              style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white38),
+                      icon: const Icon(Icons.close_rounded,
+                          color: Colors.white38),
                       onPressed: () => Navigator.pop(context),
                     )
                   ],
@@ -556,42 +751,99 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
                 padding: const EdgeInsets.all(24),
                 child: Row(
                   children: [
-                    _buildPopupHeaderStat("TOTAL BERAT", "${totalKg.toStringAsFixed(1)} KG", const Color(0xFF00CED1)),
+                    _buildPopupHeaderStat(
+                        "TOTAL BERAT",
+                        "${totalKg.toStringAsFixed(1)} KG",
+                        const Color(0xFF00CED1)),
                     const SizedBox(width: 16),
-                    _buildPopupHeaderStat("TOTAL HASIL", "$totalPcs PCS", const Color(0xFFFFD700)),
+                    _buildPopupHeaderStat("TOTAL HASIL", "$totalPcs PCS",
+                        const Color(0xFFFFD700)),
                   ],
                 ),
               ),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12)),
                 child: const Row(
                   children: [
-                    SizedBox(width: 30, child: Text("NO", style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold, fontSize: 10))),
-                    Expanded(child: Text("WARNA KAIN", style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold, fontSize: 10))),
-                    SizedBox(width: 60, child: Text("KG", style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center)),
-                    SizedBox(width: 60, child: Text("PCS", style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.right)),
+                    SizedBox(
+                        width: 30,
+                        child: Text("NO",
+                            style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10))),
+                    Expanded(
+                        child: Text("WARNA KAIN",
+                            style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10))),
+                    SizedBox(
+                        width: 60,
+                        child: Text("KG",
+                            style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10),
+                            textAlign: TextAlign.center)),
+                    SizedBox(
+                        width: 60,
+                        child: Text("PCS",
+                            style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10),
+                            textAlign: TextAlign.right)),
                   ],
                 ),
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
                       decoration: BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05))),
+                        border: Border(
+                            bottom: BorderSide(
+                                color: Colors.white.withOpacity(0.05))),
                       ),
                       child: Row(
                         children: [
-                          SizedBox(width: 30, child: Text("${index + 1}", style: const TextStyle(color: Colors.white54, fontWeight: FontWeight.bold))),
-                          Expanded(child: Text(item.warna, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
-                          SizedBox(width: 60, child: Text("${item.kgTerpakai}", style: const TextStyle(color: Color(0xFF00CED1), fontWeight: FontWeight.w900), textAlign: TextAlign.center)),
-                          SizedBox(width: 60, child: Text("${item.hasilPcs}", style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.w900), textAlign: TextAlign.right)),
+                          SizedBox(
+                              width: 30,
+                              child: Text("${index + 1}",
+                                  style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontWeight: FontWeight.bold))),
+                          Expanded(
+                              child: Text(item.warna,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800))),
+                          SizedBox(
+                              width: 60,
+                              child: Text("${item.kgTerpakai}",
+                                  style: const TextStyle(
+                                      color: Color(0xFF00CED1),
+                                      fontWeight: FontWeight.w900),
+                                  textAlign: TextAlign.center)),
+                          SizedBox(
+                              width: 60,
+                              child: Text("${item.hasilPcs}",
+                                  style: const TextStyle(
+                                      color: Color(0xFFFFD700),
+                                      fontWeight: FontWeight.w900),
+                                  textAlign: TextAlign.right)),
                         ],
                       ),
                     );
@@ -618,9 +870,16 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(color: color.withOpacity(0.6), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+            Text(label,
+                style: TextStyle(
+                    color: color.withOpacity(0.6),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1)),
             const SizedBox(height: 4),
-            Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900)),
+            Text(value,
+                style: TextStyle(
+                    color: color, fontSize: 20, fontWeight: FontWeight.w900)),
           ],
         ),
       ),
@@ -630,9 +889,16 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
   Widget _buildMiniStat(String label, String value, Color valueColor) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        Text(label,
+            style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1)),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(color: valueColor, fontSize: 18, fontWeight: FontWeight.w900)),
+        Text(value,
+            style: TextStyle(
+                color: valueColor, fontSize: 18, fontWeight: FontWeight.w900)),
       ],
     );
   }
@@ -642,18 +908,17 @@ class _LaporanViewState extends ConsumerState<LaporanView> {
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: _startDate != null && _endDate != null 
-          ? DateTimeRange(start: _startDate!, end: _endDate!) 
+      initialDateRange: _startDate != null && _endDate != null
+          ? DateTimeRange(start: _startDate!, end: _endDate!)
           : null,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: AppColors.primary, 
-              onPrimary: AppColors.navBackground, 
-              surface: AppColors.surface,
-              onSurface: Colors.white
-            ),
+                primary: AppColors.primary,
+                onPrimary: AppColors.navBackground,
+                surface: AppColors.surface,
+                onSurface: Colors.white),
           ),
           child: child!,
         );
